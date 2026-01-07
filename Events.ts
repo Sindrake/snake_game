@@ -1,3 +1,6 @@
+import type { Point } from "./Point2d";
+import type { SnakeEngine } from "./SnakeEngine";
+
 type SnakeDelegate<EventArgs> = (args: EventArgs) => void;
 class SnakeEvent<A> {
   constructor(private readonly listeners: SnakeDelegate<A>[] = []) {}
@@ -35,9 +38,24 @@ class SnakeEvent<A> {
   }
 }
 
+interface GameStateEvent {
+  engine: SnakeEngine;
+}
+interface GameOverEvent extends GameStateEvent {
+  collision: Point[];
+}
+interface PelletEatenEvent extends GameStateEvent {
+  /** The length of the snake after the pellet has been eaten. */
+  snakeLength: number;
+  pelletCoordinates: Point;
+}
+
 export {
   SnakeEvent,
 };
 export type {
-  SnakeDelegate
+  SnakeDelegate,
+  GameStateEvent,
+  GameOverEvent,
+  PelletEatenEvent,
 };

@@ -1,4 +1,4 @@
-import { SnakeEvent } from "./Events";
+import { SnakeEvent, type GameOverEvent, type GameStateEvent, type PelletEatenEvent } from "./Events";
 import { InputHandler, type IInputHandler } from "./InputHandler";
 import { Direction, Point, Rect } from "./Point2d";
 import Snake from "./Snake";
@@ -26,17 +26,6 @@ class Runner {
     this.engine.advance();
   }
 }
-interface GameStateEvent {
-  engine: SnakeEngine;
-}
-interface GameOverEvent extends GameStateEvent {
-  collision: Point[];
-}
-interface PelletEatenEvent extends GameStateEvent {
-  /** The length of the snake after the pellet has been eaten. */
-  snakeLength: number;
-  pelletCoordinates: Point;
-}
 class SnakeEngine {
   static readonly defaultConfig: EngineConfig = {
     startingDirection: Direction.up,
@@ -52,7 +41,7 @@ class SnakeEngine {
 
   // #region Events
   public readonly onGameOver = new SnakeEvent<GameOverEvent>();
-  public readonly onPelletEaten = new SnakeEvent<GameStateEvent>();
+  public readonly onPelletEaten = new SnakeEvent<PelletEatenEvent>();
   public readonly onTickCompleted = new SnakeEvent<GameStateEvent>();
   // #endregion Events
 
@@ -136,12 +125,15 @@ class SnakeEngine {
       this._isGameOver = true;
       this.onGameOver.fire({ engine: this, collision: intersection });
     } else if (eatenIndex > -1) {
+      // Remove the pellet
       const args: PelletEatenEvent = {
         engine: this,
         pelletCoordinates: this.pellets.splice(eatenIndex, 1)[0]!,
         snakeLength: this.snake.snakeLength,
       };
+      // Then make the new one
       this.generatePellet();
+      // Then fire the event
       this.onPelletEaten.fire(args);
     }
   }
