@@ -177,6 +177,15 @@ class Point2d implements IPoint2d {
   }
 }
 
+// class IntPoint2d extends Point2d {
+//   constructor(x: number, y: number) {
+//     super(Math.floor(x), Math.floor(y));
+//   }
+
+//   // public override get x(): number { return super.x; }
+//   // public override set x(v: number) { super.x = Math.floor(v); }
+// }
+
 interface IRect2d {
   width: number;
   height: number;
@@ -292,6 +301,108 @@ class Rect2d implements IRect2d, IExtents2d, IBounds2d {
   }
 }
 
+// TODO: Implement remaining setters (Change dimensions, or change min?)
+// TODO: Integer rectangles don't have `min + width/height` as their max point.
+class RectInt2d implements IRect2d, IExtents2d, IBounds2d {
+  // #region Properties
+  public get width(): number { return this._width; }
+  public set width(v: number) { this._width = Math.abs(v); }
+
+  public get height(): number { return this._height; }
+  public set height(v: number) { this._height = Math.abs(v); }
+
+  public get dimensions(): IPoint2d { return { x: this.width, y: this.height }; }
+  public set dimensions(v: IPoint2d) { ({ x: this.width, y: this.height } = v); }
+
+  public min: IPoint2d;
+  // public get max(): IPoint2d { return Point2d.add(this.min, this.dimensions); }
+  public get max(): IPoint2d { return Point2d.add(this.min, Point2d.subtract(this.dimensions, { x: 1, y: 1 })); }
+  public get xExtent(): number { return this.width / 2; }
+  public set xExtent(v: number) { this.width = v * 2; }
+  public get yExtent(): number { return this.height / 2; }
+  public set yExtent(v: number) { this.height = v * 2; }
+  /** Half the width & height. */
+  public get extents(): IPoint2d { return { x: this.xExtent, y: this.yExtent }; }
+  public set extents(v: IPoint2d) { ({ x: this.xExtent, y: this.yExtent } = v); }
+  public get center(): IPoint2d { return Point2d.add(this.min, this.extents); }
+  public get centerInt(): IPoint2d { return Point2d.toIntPoint2d(this.center); }
+
+  public get xMin(): number { return this.min.x; }
+  public get xMax(): number { return this.max.x; }
+  public get yMin(): number { return this.min.y; }
+  public get yMax(): number { return this.max.y; }
+
+  public get leftEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMin), new Point2d(this.xMin, this.yMax)]; }
+  public get rightEdge(): Point2d[] { return [new Point2d(this.xMax, this.yMin), new Point2d(this.xMax, this.yMin)]; }
+  public get topEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMin), new Point2d(this.xMax, this.yMin)]; }
+  public get bottomEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMax), new Point2d(this.xMax, this.yMax)]; }
+
+  public get edges() { return [this.leftEdge, this.rightEdge, this.topEdge, this.bottomEdge]; }
+  // #endregion Properties
+
+  // #region Constructors
+  public static fromMinMax(min: IPoint2d, max: IPoint2d) {
+    if (min.x > max.x) {
+      const t = min.x;
+      min.x = max.x;
+      max.x = t;
+    }
+    if (min.y > max.y) {
+      const t = min.y;
+      min.y = max.y;
+      max.y = t;
+    }
+    const dimensions = Point2d.add(Point2d.subtract(max, min), { x: 1, y: 1 });
+    return this.fromDimensionsAndMin(dimensions.x, dimensions.y, min);
+  }
+
+  // TODO: Figure it out
+  // public static fromExtents(xMin: number, xMax: number, yMin: number, yMax: number) {
+  //   return this.fromMinMax({ x: xMin, y: yMin }, { x: xMax, y: yMax });
+  // }
+
+  public static fromDimensionsAndCenter(width: number, height: number, point: IPoint2d) {
+    // if (width < 0) width *= -1;
+    // if (height < 0) height *= -1;
+    // const extents = { x: width / 2, y: height / 2 };
+    // return this.fromMinMax(Point2d.subtract(point, extents), Point2d.add(point, extents));
+    return new RectInt2d(width, height, point, true);
+  }
+
+  public static fromDimensionsAndMin(width: number, height: number, point: IPoint2d = { x: 0, y: 0 }) {
+    // if (width < 0) width *= -1;
+    // if (height < 0) height *= -1;
+    // return this.fromMinMax(point, Point2d.add(point, { x: width, y: height }));
+    return new RectInt2d(width, height, point);
+  }
+
+  private constructor(private _width: number, private _height: number, point: IPoint2d, isCenter = false) {
+    if (_width < 0) this._width *= -1;
+    if (_height < 0) this._height *= -1;
+    this.min = isCenter ? Point2d.subtract(point, this.extents) : point;
+  }
+  // #endregion Constructors
+
+  public intersects(p: IPoint2d) {
+    return (this.xMin <= p.x && this.xMax >= p.x && this.yMin <= p.y && this.yMax >= p.y);
+  }
+
+  public findIntersection(p: Point2d) {
+    for (const edge of this.edges) {
+      if (p.intersects(edge[0]!, edge[1]!)) return edge;
+    }
+    return false;
+  }
+
+  public wrap<P extends IPoint2d>(p: P) {
+    while (p.x > this.xMax) p.x -= this.width;
+    while (p.x < this.xMin) p.x += this.width;
+    while (p.y > this.yMax) p.y -= this.height;
+    while (p.y < this.yMin) p.y += this.height;
+    return p;
+  }
+}
+
 export {
   Point2d as Point,
   Point2d,
@@ -301,6 +412,8 @@ export {
   Direction2d,
   Rect2d as Rect,
   Rect2d,
+  RectInt2d as RectInt,
+  RectInt2d,
 };
 export type {
   IPoint2d as IPoint,

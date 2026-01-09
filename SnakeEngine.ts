@@ -1,6 +1,6 @@
 import { SnakeEvent, type GameOverEvent, type GameStateEvent, type PelletEatenEvent } from "./Events";
 import { InputHandler, type IInputHandler } from "./InputHandler";
-import { Direction, Point, Rect } from "./Point2d";
+import { Direction, Point, RectInt as Rect } from "./Point2d";
 import Snake from "./Snake";
 import { type EngineConfig, WallBehavior, type IEngineConfig } from "./Types";
 

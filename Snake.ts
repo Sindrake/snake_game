@@ -1,4 +1,4 @@
-import { Point, Rect, Point2d, Direction, Axis } from "./Point2d";
+import { Point, RectInt as Rect, Point2d, Direction, Axis } from "./Point2d";
 import type { SnakeEngine } from "./SnakeEngine";
 import { WallBehavior } from "./Types";
 
