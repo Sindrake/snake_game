@@ -3,7 +3,7 @@
  * A container
  */
 
-/** An object w/ an x & y property. */
+/** An object w/ a numeric x & y property. */
 interface IPoint2d {
   x: number;
   y: number;
@@ -42,6 +42,8 @@ class Direction2d implements IPoint2d {
 }
 
 class Point2d implements IPoint2d {
+  public toIntPoint2d() { return { x: Math.floor(this.x), y: Math.floor(this.y) }; }
+  public static toIntPoint2d(p: IPoint2d) { return { x: Math.floor(p.x), y: Math.floor(p.y) }; }
   public toIPoint2d() { return { x: this.x, y: this.y }; }
   public static toIPoint2d(p: IPoint2d) { return { x: p.x, y: p.y }; }
   public static fromIPoint2d(p: IPoint2d) { return p instanceof Point2d ? p : new Point2d(p.x, p.y); }
@@ -56,6 +58,7 @@ class Point2d implements IPoint2d {
   }
 
   // #region Math
+  // #region Instance/Static Pairs
   public static subtract(p1: IPoint2d, p2: IPoint2d): Point2d {
     return new Point2d(
       p1.x - p2.x,
@@ -115,10 +118,20 @@ class Point2d implements IPoint2d {
   public magnitude(): number {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
+  // #endregion Instance/Static Pairs
+
+  public static midpoint(p1: IPoint2d, p2: IPoint2d): Point2d {
+    return new Point2d(
+      (p1.x + p2.x) / 2,
+      (p1.y + p2.y) / 2,
+    );
+  }
   // #endregion Math
 
   /**
    * Doesn't match correctly for diagonal lines.
+   *
+   * TODO: Rename to `intersectsCardinally`
    * @param p1
    * @param p2
    * @returns
@@ -153,7 +166,7 @@ class Point2d implements IPoint2d {
       case 1:
         break;
       default:
-        throw new Error(`Invalid value from Point2d.matchingAxes(${p2}) (${m2})`);
+        throw new Error(`Invalid value from Point2d.intersects(${p2}) (${a})`);
     }
     // If this is aligned on the y axis, it must be between or on the extremes on the x, & vice versa.
     if (a[0]! === Axis2d.y) {
@@ -181,6 +194,7 @@ interface IBounds2d {
 }
 
 // TODO: Implement remaining setters (Change dimensions, or change min?)
+// TODO: Integer rectangles don't have `min + width/height` as their max point.
 class Rect2d implements IRect2d, IExtents2d, IBounds2d {
   // #region Properties
   public get width(): number { return this._width; }
@@ -194,7 +208,6 @@ class Rect2d implements IRect2d, IExtents2d, IBounds2d {
 
   public min: IPoint2d;
   public get max(): IPoint2d { return Point2d.add(this.min, this.dimensions); }
-  // public set max(v: IPoint2d) { return Point2d.add(this.min, this.dimensions); }
   public get xExtent(): number { return this.width / 2; }
   public set xExtent(v: number) { this.width = v * 2; }
   public get yExtent(): number { return this.height / 2; }
@@ -203,25 +216,16 @@ class Rect2d implements IRect2d, IExtents2d, IBounds2d {
   public get extents(): IPoint2d { return { x: this.xExtent, y: this.yExtent }; }
   public set extents(v: IPoint2d) { ({ x: this.xExtent, y: this.yExtent } = v); }
   public get center(): IPoint2d { return Point2d.add(this.min, this.extents); }
-  // public set center(v: IPoint2d) { return Point2d.add(this.min, this.extents); }
 
-  public get xMin(): number { return this.min.x - this.xExtent; }
-  // public set xMin(v: number) { return this.min.x - this.xExtent; }
-  public get xMax(): number { return this.min.x + this.xExtent; }
-  // public set xMax(v: number) { return this.min.x + this.xExtent; }
-  public get yMin(): number { return this.min.y - this.yExtent; }
-  // public set yMin(v: number) { return this.min.y - this.yExtent; }
-  public get yMax(): number { return this.min.y + this.yExtent; }
-  // public set yMax(v: number) { return this.min.y + this.yExtent; }
+  public get xMin(): number { return this.min.x; }
+  public get xMax(): number { return this.max.x; }
+  public get yMin(): number { return this.min.y; }
+  public get yMax(): number { return this.max.y; }
 
   public get leftEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMin), new Point2d(this.xMin, this.yMax)]; }
-  // public set leftEdge(v: Point2d[]) {  }
   public get rightEdge(): Point2d[] { return [new Point2d(this.xMax, this.yMin), new Point2d(this.xMax, this.yMin)]; }
-  // public set rightEdge(v: Point2d[]) {  }
   public get topEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMin), new Point2d(this.xMax, this.yMin)]; }
-  // public set topEdge(v: Point2d[]) {  }
   public get bottomEdge(): Point2d[] { return [new Point2d(this.xMin, this.yMax), new Point2d(this.xMax, this.yMax)]; }
-  // public set bottomEdge(v: Point2d[]) {  }
 
   public get edges() { return [this.leftEdge, this.rightEdge, this.topEdge, this.bottomEdge]; }
   // #endregion Properties
