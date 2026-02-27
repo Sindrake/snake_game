@@ -8,8 +8,6 @@ import { DebugLevel } from "./DebugLevel";
 class SnakeEngine {
   public static debugLevel = DebugLevel.LOG;
 
-  public inputHandler: IInputHandler = new DebugInputHandler();
-
   // #region Events
   public readonly onGameOver = new SnakeEvent<GameOverEvent>();
   public readonly onPelletEaten = new SnakeEvent<PelletEatenEvent>();
@@ -51,6 +49,7 @@ class SnakeEngine {
 
   constructor(
     public readonly config: IEngineConfig = EngineConfig.defaultConfig,
+    public readonly inputHandler: IInputHandler = new DebugInputHandler(),
   ) {
     this.playfieldRect = Rect.fromDimensionsAndMin(config.gridWidth, config.gridHeight);
     this.snake = Snake.fromPreferences(this.config, this.playfieldRect);

@@ -7,7 +7,7 @@ class InputAction {
   public static readonly left = new InputAction("left", Direction.left);
   public static readonly right = new InputAction("right", Direction.right);
 
-  constructor(public readonly name: string, public readonly direction: Direction) {}
+  private constructor(public readonly name: string, public readonly direction: Direction) {}
 }
 interface IInputHandler {
   /** Should the state overwrite released keys, or only update pressed/held keys? */

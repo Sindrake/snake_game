@@ -19,142 +19,6 @@ enum CauseOfDeath {
   selfCollision,
   wallCollision,
 }
-type RetDepthFirst = { success: boolean; nodes: Point[]; validNodes: IPoint[] };
-class NodeGeneration {
-  public static DEBUG_LEVEL = DebugLevel.INFO;
-  private static findValidNeighborIndices(node: Readonly<IPoint>, validNodes: Readonly<IPoint[]>) {
-    return Direction.directions
-      .reduce((accumulator, direction) => {
-        // const t = validNodes.findIndex(e => Point.add(node, c).equals(e));
-        const neighbor = Point.add(node, direction), t = validNodes.findIndex(e => neighbor.equals(e));
-        if (t !== -1) accumulator.push(t);
-        return accumulator;
-      }, [] as number[]);
-  }
-
-  public static generateFacingDirection(
-    // nodes: Point[],
-    validNodes: IPoint[],
-    desiredLength: number,
-    direction: Direction,
-  ) {
-    const newDesiredLength = desiredLength - 2;
-    const starts = validNodes.reduce<{ nodes: Point[]; validNodes: IPoint[] }[]>((acc, potentialHead) => {
-      const secondNodeIndex = validNodes.findIndex(e => Point.equals(Point.subtract(potentialHead, direction), e));
-      if (secondNodeIndex >= 0) acc.push({
-        nodes:      [Point.fromIPoint2d(potentialHead), Point.fromIPoint2d(validNodes[secondNodeIndex]!)],
-        validNodes: validNodes.slice(0, secondNodeIndex).concat(validNodes.slice(secondNodeIndex + 1)),
-      });
-      return acc;
-    }, []);
-    let rv: RetDepthFirst, best: RetDepthFirst | undefined;
-    do {
-      const args = starts.splice(randomIndex(starts), 1)[0]!;
-      rv = this.depthFirst(args.nodes, args.validNodes, newDesiredLength);
-      if (!best || rv.success || rv.nodes.length > rv.nodes.length) best = rv;
-    } while (!rv.success && starts.length > 0);
-    return rv;
-  }
-
-  // private static depthFirstStats(nodes: Point[], validNodes: IPoint[], desiredLength: number, options: Point2d[], optionSelectedIndex: number) {
-  // }
-
-  // private static dfProfiles: {[k:string]:number|string}[] = [];
-
-  /**
-   * This uses a simple depth-first search for generation that gets problematic
-   * past a point, so we're limiting it to this long.
-   */
-  public static readonly MAX_GENERATED_LENGTH = 75;
-  private static depthFirst_iterations = 0;
-  private static depthFirst_maxLength = 0;
-  private static depthFirst_longest:  Readonly<Point[]> = [];
-  public static depthFirst_playfield: RectInt | undefined;
-  private static depthFirst_failedOptions = new Map<string, number>();
-  private static depthFirst_iterationLimit = 100000;
-  private static depthFirst_depth = 0;
-  /**
-   * TODO: Add `initialValidOptions` for heuristics?
-   * TODO: Add conditions for head node (has space)?
-   * TODO: Change `nodes` to `startNode`?
-   * TODO: Change `desiredLength` to `numNodesToAdd`?
-   * @param nodes
-   * @param validNodes
-   * @param desiredLength
-   * @returns
-   */
-  public static depthFirst(
-    nodes: Point[],
-    validNodes: IPoint[],
-    desiredLength: number,
-  ): RetDepthFirst {
-    this.depthFirst_depth++;
-    this.depthFirst_iterations++;
-    this.DEBUG_LEVEL.do(
-      LOG,
-      (print) => {
-        let css = "";
-        if (nodes.length > this.depthFirst_maxLength) {
-          this.depthFirst_maxLength = nodes.length;
-          this.depthFirst_longest = nodes;
-          css = "color: green; text-decoration: underline;";
-        }
-        print("depthFirst(%s nodes, %s validNodes, desiredLength: %s)\n\titerations: %s\n%c\tmax: %s", nodes.length, validNodes.length, desiredLength, this.depthFirst_iterations, css, this.depthFirst_maxLength);
-      },
-    );
-    if (nodes.length === desiredLength) {
-      this.DEBUG_LEVEL.do(INFO, (print) => {
-        print("SUCCESS at %s iterations", this.depthFirst_iterations);
-        this.depthFirst_iterations = this.depthFirst_maxLength = 0;
-        this.depthFirst_longest = [];
-      });
-      this.depthFirst_depth--;
-      return { success: true, nodes: nodes, validNodes: validNodes };
-    }
-    if (this.depthFirst_iterations >= this.depthFirst_iterationLimit) {
-      this.DEBUG_LEVEL.do(WARN, (print) => {
-        print("FAILURE: Exceeded cap of %s iterations (%s)", this.depthFirst_iterationLimit, this.depthFirst_iterations);
-        /* this.depthFirst_iterations =  */this.depthFirst_maxLength = 0;
-        this.depthFirst_longest = [];
-      });
-      this.DEBUG_LEVEL.debugger(DEBUG);
-      this.depthFirst_depth--;
-      return { success: false, nodes: nodes, validNodes: validNodes };
-    }
-    /* if (nodes.length < 1) {
-      const nodeIndex = randomIndex(validNodes);
-      // this.DEBUG_LEVEL.print(DEBUG, "Adding starting node at %s", validNodes[nodeIndex]);
-      // TODO: Put in a loop.
-      this.depthFirst_depth--;
-      return this.depthFirst([Point.fromIPoint2d(validNodes[nodeIndex]!)], validNodes.slice(0, nodeIndex).concat(validNodes.slice(nodeIndex + 1)), desiredLength);
-    } */
-    const options = nodes.length < 1
-      ? Array.from(validNodes.keys())
-      : this.findValidNeighborIndices(nodes.at(-1)!, validNodes);
-    if (options.length < 1) {
-      this.DEBUG_LEVEL.do(INFO, (print) => {
-        print("FAILED: No options");
-        if (this.depthFirst_playfield) DebugLevel.tableFromPointsAndPlayfield(nodes, this.depthFirst_playfield);
-      });
-      this.depthFirst_depth--;
-      return { success: false, nodes: nodes, validNodes: validNodes };
-    }
-    // this.DEBUG_LEVEL.print(DEBUG, "%s options", options.length);
-    do {
-      // this.DEBUG_LEVEL.print(DEBUG, "Option %s", i);
-      // Randomize the selection to stop march towards upper-left & prevent always returning to a dead-end path
-      const nodeIndex = options.splice(randomIndex(options), 1)[0]!,
-            node = validNodes[nodeIndex]!,
-            vnCopy = validNodes.slice(0, nodeIndex).concat(validNodes.slice(nodeIndex + 1)),
-            result = this.depthFirst(nodes.concat([Point.fromIPoint2d(node)]), vnCopy, desiredLength);
-      if (result.success) { this.depthFirst_depth--; return result; }
-      // TODO: Analyze failed path for heuristics?
-    } while (options.length > 0 && this.depthFirst_iterations < this.depthFirst_iterationLimit);
-    // this.DEBUG_LEVEL.print(DEBUG, "FAILED: All options failed");
-    if (--this.depthFirst_depth === 0) this.depthFirst_iterations = 0;
-    return { success: false, nodes: nodes, validNodes: validNodes };
-  }
-}
 
 interface INodeConfig {
   get direction(): Direction;
@@ -170,13 +34,8 @@ class ParameterizedNodeConfig implements INodeConfig {
   public direction: Direction;
   public nodes:     Point[];
   constructor(public count: number, validNodes: IPoint[], _direction?: Direction) {
-    if (_direction) {
-      this.direction = _direction;
-      this.nodes = NodeGeneration.generateFacingDirection(validNodes, count, this.direction).nodes;
-    } else {
-      this.nodes = NodeGeneration.depthFirst([], validNodes, count).nodes;
-      this.direction = Direction.fromCardinalDisplacement(this.nodes[1]!, this.nodes[0]!)!;
-    }
+    this.nodes = NodeGeneration.generateFromValidNodes(count, validNodes, _direction).nodes;
+    this.direction = _direction || Direction.fromCardinalDisplacement(this.nodes[1]!, this.nodes[0]!)!;
   }
 }
 interface ISnakeConfig {
@@ -301,7 +160,195 @@ function randomIndex(a: Readonly<Array<unknown>>) {
   return Math.floor(a.length * Math.random());
 }
 
-export type { IEngineConfig, ISnakeConfig };
+type GenerationOutput = { success: boolean; nodes: Point[]; validNodes: IPoint[] };
+class NodeGeneration {
+  public static DEBUG_LEVEL = DebugLevel.INFO;
+  private static findValidNeighborIndices(node: Readonly<IPoint>, validNodes: Readonly<IPoint[]>) {
+    return Direction.directions
+      .reduce((accumulator, direction) => {
+        // const t = validNodes.findIndex(e => Point.add(node, c).equals(e));
+        const neighbor = Point.add(node, direction), t = validNodes.findIndex(e => neighbor.equals(e));
+        if (t !== -1) accumulator.push(t);
+        return accumulator;
+      }, [] as number[]);
+  }
+
+  private static generateFacingDirection(
+    // nodes: Point[],
+    validNodes: IPoint[],
+    desiredLength: number,
+    direction: Direction,
+  ) {
+    const newDesiredLength = desiredLength/*  - 2 */;
+    const starts = validNodes.reduce<{ nodes: Point[]; validNodes: IPoint[] }[]>((acc, potentialHead, i) => {
+      const secondNodeIndex = validNodes.findIndex(e => Point.equals(Point.subtract(potentialHead, direction), e));
+      if (secondNodeIndex >= 0) {
+        const [i1, i2] = i < secondNodeIndex ? [i, secondNodeIndex] : [secondNodeIndex, i];
+        acc.push({
+          nodes:      [Point.fromIPoint2d(potentialHead), Point.fromIPoint2d(validNodes[secondNodeIndex]!)],
+          validNodes: validNodes.slice(0, i1).concat(validNodes.slice(i1 + 1, i2), validNodes.slice(i2 + 1)),
+        });
+      }
+      return acc;
+    }, []);
+    let rv: GenerationOutput, best: GenerationOutput | undefined;
+    do {
+      const args = starts.splice(randomIndex(starts), 1)[0]!;
+      rv = this.depthFirst(args.nodes, args.validNodes, newDesiredLength);
+      if (!best || rv.success || rv.nodes.length > rv.nodes.length) best = rv;
+    } while (!rv.success && starts.length > 0);
+    return rv;
+  }
+
+  public static generateFromValidNodes(desiredLength: number, validNodes: IPoint[], startingDirection?: Direction) {
+    if (startingDirection) return this.generateFacingDirection(validNodes, desiredLength, startingDirection);
+    else return this.depthFirst([], validNodes, desiredLength);
+  }
+
+  public static generateFromPlayfield(desiredLength: number, playfield: RectInt, claimedNodes?: IPoint[], startingDirection?: Direction) {
+    this.depthFirst_playfield = playfield;
+    const rv = this.generateFromValidNodes(desiredLength, this.getInitialValidNodes(playfield, claimedNodes), startingDirection);
+    this.depthFirst_playfield = undefined;
+    return rv;
+  }
+
+  public static generateFromSnakeConfig(config: ISnakeConfig, playfield: RectInt, claimedNodes?: IPoint[]) {
+    return this.generateFromPlayfield(config.startingLength, playfield, claimedNodes, config.startingDirection);
+  }
+
+  public static generateFromEngineConfig(config: IEngineConfig) {
+    const claimedNodes: IPoint[] = [];
+    if (typeof config.obstacleConfig.startingObjs === "object") claimedNodes.concat(config.obstacleConfig.startingObjs);
+    if (typeof config.pelletConfig.startingObjs === "object") claimedNodes.concat(config.pelletConfig.startingObjs);
+    return this.generateFromSnakeConfig(
+      config,
+      RectInt.fromDimensionsAndMin(config.gridWidth, config.gridHeight),
+      claimedNodes,
+    );
+  }
+
+  /**
+   * This uses a simple depth-first search for generation that gets problematic
+   * past a point, so we're limiting it to this long.
+   */
+  public static readonly MAX_GENERATED_LENGTH = 75;
+  private static depthFirst_iterations = 0;
+  private static depthFirst_maxLength = 0;
+  private static depthFirst_playfield: RectInt | undefined;
+  private static depthFirst_iterationLimit = 100000;
+  private static depthFirst_depth = 0;
+  /**
+   * TODO: Add `initialValidOptions` for heuristics?
+   * TODO: Add conditions for head node (has space)?
+   * TODO: Change `nodes` to `startNode`?
+   * TODO: Change `desiredLength` to `numNodesToAdd`?
+   * TODO: Add profiling?
+   * @param nodes
+   * @param validNodes
+   * @param desiredLength
+   * @returns
+   */
+  private static depthFirst(
+    nodes: Point[],
+    validNodes: IPoint[],
+    desiredLength: number,
+  ): GenerationOutput {
+    this.depthFirst_depth++;
+    this.depthFirst_iterations++;
+    this.DEBUG_LEVEL.do(
+      LOG,
+      (print) => {
+        let css = "";
+        if (nodes.length > this.depthFirst_maxLength) {
+          this.depthFirst_maxLength = nodes.length;
+          css = "color: green; text-decoration: underline;";
+        }
+        print("depthFirst(%s nodes, %s validNodes, desiredLength: %s)\n\titerations: %s\n%c\tmax: %s", nodes.length, validNodes.length, desiredLength, this.depthFirst_iterations, css, this.depthFirst_maxLength);
+      },
+    );
+    if (nodes.length === desiredLength) {
+      this.DEBUG_LEVEL.do(INFO, (print) => {
+        print("SUCCESS at %s iterations", this.depthFirst_iterations);
+        this.depthFirst_iterations = this.depthFirst_maxLength = 0;
+      });
+      this.depthFirst_depth--;
+      return { success: true, nodes: nodes, validNodes: validNodes };
+    }
+    if (this.depthFirst_iterations >= this.depthFirst_iterationLimit) {
+      this.DEBUG_LEVEL.do(WARN, (print) => {
+        print("FAILURE: Exceeded cap of %s iterations (%s)", this.depthFirst_iterationLimit, this.depthFirst_iterations);
+        /* this.depthFirst_iterations =  */this.depthFirst_maxLength = 0;
+      });
+      this.DEBUG_LEVEL.debugger(DEBUG);
+      this.depthFirst_depth--;
+      return { success: false, nodes: nodes, validNodes: validNodes };
+    }
+    /* if (nodes.length < 1) {
+      const nodeIndex = randomIndex(validNodes);
+      // this.DEBUG_LEVEL.print(DEBUG, "Adding starting node at %s", validNodes[nodeIndex]);
+      // TODO: Put in a loop.
+      this.depthFirst_depth--;
+      return this.depthFirst([Point.fromIPoint2d(validNodes[nodeIndex]!)], validNodes.slice(0, nodeIndex).concat(validNodes.slice(nodeIndex + 1)), desiredLength);
+    } */
+    const options = nodes.length < 1
+      ? Array.from(validNodes.keys())
+      : this.findValidNeighborIndices(nodes.at(-1)!, validNodes);
+    if (options.length < 1) {
+      this.DEBUG_LEVEL.do(INFO, (print) => {
+        print("FAILED: No options");
+        if (this.depthFirst_playfield) DebugLevel.tableFromPointsAndPlayfield(nodes, this.depthFirst_playfield);
+      });
+      this.depthFirst_depth--;
+      return { success: false, nodes: nodes, validNodes: validNodes };
+    }
+    // this.DEBUG_LEVEL.print(DEBUG, "%s options", options.length);
+    do {
+      // this.DEBUG_LEVEL.print(DEBUG, "Option %s", i);
+      // Randomize the selection to stop march towards upper-left & prevent always returning to a dead-end path
+      const nodeIndex = options.splice(randomIndex(options), 1)[0]!,
+            node = validNodes[nodeIndex]!,
+            vnCopy = validNodes.slice(0, nodeIndex).concat(validNodes.slice(nodeIndex + 1)),
+            result = this.depthFirst(nodes.concat([Point.fromIPoint2d(node)]), vnCopy, desiredLength);
+      if (result.success) { this.depthFirst_depth--; return result; }
+      // TODO: Analyze failed path for heuristics?
+    } while (options.length > 0 && this.depthFirst_iterations < this.depthFirst_iterationLimit);
+    // this.DEBUG_LEVEL.print(DEBUG, "FAILED: All options failed");
+    if (--this.depthFirst_depth === 0) this.depthFirst_iterations = 0;
+    return { success: false, nodes: nodes, validNodes: validNodes };
+  }
+
+  private static readonly ALLOW_STARTING_NODES_ON_PERIMETER = true;
+  private static isOnPerimeter(e: IPoint, playfield: RectInt) {
+    return e.x > playfield.xMin && e.x < playfield.xMax - 1 && e.y > playfield.yMin && e.y < playfield.yMax - 1;
+  }
+
+  private static getInitialValidNodes(playfield: RectInt, claimedNodes?: IPoint[]) {
+    if (this.ALLOW_STARTING_NODES_ON_PERIMETER) {
+      if (claimedNodes) {
+        return playfield.generatePointsWhere(e => !Point.included(e, claimedNodes));
+      } else {
+        return playfield.points;
+      }
+    } else {
+      return playfield
+        .generatePointsWhere(claimedNodes
+          ? e => this.isOnPerimeter(e, playfield) && !Point.included(e, claimedNodes)
+          : e => this.isOnPerimeter(e, playfield));
+    }
+  }
+
+  public static removeSurplusNodes(nodes: Point[]) {
+    for (let i = 1; i < nodes.length - 1; i++) {
+      if (nodes[i + 1]!.matchingAxes(nodes[i]!)[0] == nodes[i]!.matchingAxes(nodes[i - 1]!)[0]) {
+        this.DEBUG_LEVEL.print(LOG, "Removing redundant segment");
+        nodes.splice(i, 1);
+      }
+    }
+    return nodes;
+  }
+}
+
+export type { IEngineConfig, ISnakeConfig, GenerationOutput };
 export {
   EngineConfig,
   WallBehavior,
@@ -314,4 +361,5 @@ export {
   LOG,
   DEBUG, */
   randomIndex,
+  NodeGeneration,
 };

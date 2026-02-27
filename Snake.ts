@@ -1,5 +1,5 @@
 import { Point, RectInt, Direction, Axis, type IPoint } from "./Point2d";
-import { randomIndex, WallBehavior, type ISnakeConfig } from "./Types";
+import { NodeGeneration, randomIndex, WallBehavior, type GenerationOutput, type ISnakeConfig } from "./Types";
 import { DEBUG, DebugLevel, ERROR, INFO, LOG, WARN } from "./DebugLevel";
 
 /**
@@ -17,15 +17,15 @@ class Snake {
     this._snakeNodes = startingNodes.slice();
   }
 
-  // public static fromNodes(config: ISnakeConfig, startingNodes: Point[]) {
-  //   return new Snake(engine, startingNodes);
-  // }
-
+  // #region Deprecated Generation Code
+  /** @deprecated */
   private static readonly ALLOW_STARTING_NODES_ON_PERIMETER = true;
+  /** @deprecated */
   private static isOnPerimeter(e: IPoint, playfield: RectInt) {
     return e.x > playfield.xMin && e.x < playfield.xMax - 1 && e.y > playfield.yMin && e.y < playfield.yMax - 1;
   }
 
+  /** @deprecated */
   private static getInitialValidNodes(playfield: RectInt, claimedNodes?: IPoint[]) {
     if (this.ALLOW_STARTING_NODES_ON_PERIMETER) {
       if (claimedNodes) {
@@ -41,6 +41,7 @@ class Snake {
     }
   }
 
+  /** @deprecated */
   private static findValidNeighborIndices(node: Readonly<IPoint>, validNodes: Readonly<IPoint[]>) {
     return Direction.directions
       .reduce((accumulator, direction) => {
@@ -59,16 +60,17 @@ class Snake {
   /**
    * This uses a simple depth-first search for generation that gets problematic
    * past a point, so we're limiting it to this long.
+   * @deprecated
    */
   public static readonly MAX_GENERATED_LENGTH = 75;
-  private static depthFirst_iterations = 0;
-  private static depthFirst_maxLength = 0;
-  private static depthFirst_longest:  Readonly<Point[]> = [];
-  public static depthFirst_playfield: RectInt | undefined;
-  private static depthFirst_failedOptions = new Map<string, number>();
-  private static depthFirst_iterationLimit = 100000;
-  private static depthFirst_depth = 0;
+  /** @deprecated */ private static depthFirst_iterations = 0;
+  /** @deprecated */ private static depthFirst_maxLength = 0;
+  /** @deprecated */ private static depthFirst_longest:  Readonly<Point[]> = [];
+  /** @deprecated */ public static depthFirst_playfield: RectInt | undefined;
+  /** @deprecated */ private static depthFirst_iterationLimit = 100000;
+  /** @deprecated */ private static depthFirst_depth = 0;
   /**
+   * @deprecated
    * TODO: Add `initialValidOptions` for heuristics?
    * TODO: Add conditions for head node (has space)?
    * TODO: Change `nodes` to `startNode`?
@@ -150,6 +152,7 @@ class Snake {
     return { success: false, nodes: nodes, validNodes: validNodes };
   }
 
+  /** @deprecated */
   private static removeSurplusNodes(nodes: Point[]) {
     for (let i = 1; i < nodes.length - 1; i++) {
       if (nodes[i + 1]!.matchingAxes(nodes[i]!)[0] == nodes[i]!.matchingAxes(nodes[i - 1]!)[0]) {
@@ -160,6 +163,7 @@ class Snake {
     return nodes;
   }
 
+  /** @deprecated */
   public static genNodesV2(config: Readonly<ISnakeConfig>, playfield: RectInt, claimedNodes?: IPoint[]) {
     this.DEBUG_LEVEL.group(ERROR, "genNodesV2(%o, %o, %o)", config, playfield, claimedNodes);
     if ((config.startingLength || 0) < 2) {
@@ -185,6 +189,7 @@ class Snake {
     this.DEBUG_LEVEL.print(INFO, "Start (%s): %o", nodes.length, nodes);
   }
 
+  /** @deprecated */
   public static attemptToGenerateNodes(config: Readonly<ISnakeConfig>, playfield: RectInt, claimedNodes?: IPoint[]) {
     this.DEBUG_LEVEL.group(ERROR, "attemptToGenerateNodes(%o, %o, %o)", config, playfield, claimedNodes);
     if ((config.startingLength || 0) < 2) {
@@ -208,26 +213,22 @@ class Snake {
     this.DEBUG_LEVEL.groupEnd(ERROR);
     return nodes;
   }
+  // #endregion Deprecated Generation Code
 
   public static fromPreferences(config: Readonly<ISnakeConfig>, playfield: RectInt, claimedNodes?: IPoint[]) {
     if (config.startingNodes) return new Snake(config, config.startingNodes, playfield);
-    // return new Snake(config, this.attemptToGenerateNodes(config, playfield, claimedNodes), playfield);
     if (
       !config.startingLength
       || config.startingLength > this.MAX_GENERATED_LENGTH
       || config.startingLength < 2
-    ) {
+    )
       throw new Error("Invalid Config");
-    }
-    let rv: Point[] | Array<undefined | Point[]> = [];
-    for (let i = 0; !rv[0] && i < 20; i++) {
-      // rv = this.attemptToGenerateNodes(config, playfield, claimedNodes);
-      rv = this.genNodesV2(config, playfield, claimedNodes);
-    }
-    if (!rv[0]) {
-      throw new Error(`Only Generated ${(rv[1] as Point[]).length} of ${config.startingLength!}`);
-    }
-    return new Snake(config, rv as Point[], playfield);
+    let rv: GenerationOutput = { success: false, nodes: [], validNodes: [] };
+    for (let i = 0; !rv.success && i < 20; i++)
+      rv = NodeGeneration.generateFromSnakeConfig(config, playfield, claimedNodes);
+    if (!rv.success)
+      throw new Error(`Only Generated ${rv.nodes.length} of ${config.startingLength!}`);
+    return new Snake(config, rv.nodes, playfield);
   }
   // #endregion Initialization
 
@@ -448,7 +449,8 @@ class Snake {
         this.head.y = projectedPosition.y;
       }
       : () => this._snakeNodes.unshift(projectedPosition);
-    intersection ||= (this.segments.length - (ignoreFirstSeg ? 1 : 0)) ? undefined : checkSelfIntersection();
+    // TODO: Rule-out self-intersections on snakes with too few segments?
+    intersection ||= /* (this.segments.length - (ignoreFirstSeg ? 1 : 0)) ? undefined : */ checkSelfIntersection();
     if (intersection) {
       Snake.DEBUG_LEVEL.print(WARN, "Collided on segment %o", intersection);
       Snake.DEBUG_LEVEL.groupEnd(INFO);
