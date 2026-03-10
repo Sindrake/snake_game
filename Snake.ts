@@ -460,6 +460,16 @@ class Snake {
     assignNewHead();
     Snake.DEBUG_LEVEL.groupEnd(INFO);
   }
+
+  // #region External Helpers
+  // TODO: If direction matters
+  // public findNodeDirection(node: Point) {
+  //   const tNodes = this.filledNodes;
+  //   if (tNodes.find(e => node.equals(e))) {
+
+  //   }
+  // }
+  // #endregion External Helpers
 }
 
 export default Snake;

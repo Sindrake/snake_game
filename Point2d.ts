@@ -442,7 +442,10 @@ class RectInt2d implements IRect2d, IExtents2d, IBounds2d {
   // #endregion Properties
 
   // #region Constructors
-  public static fromMinMax(min: IPoint2d, max: IPoint2d) {
+  /**
+   * @param max Inclusive
+   */
+  public static fromMinMax(min: IPoint2d, max: IPoint2d/* , inclusiveMax = true, inclusiveMin = true */) {
     if (min.x > max.x) {
       const t = min.x;
       min.x = max.x;

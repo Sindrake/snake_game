@@ -90,7 +90,7 @@ class EngineConfig implements IEngineConfig {
     wallBehavior:          WallBehavior.endGame,
     pelletConfig:          { startingObjs: 1, maxObjs: 1 },
     obstacleConfig:        { startingObjs: 0, maxObjs: 0 },
-    millisecondsPerUpdate: 1 / 60,
+    millisecondsPerUpdate: 1000 * 0.5, // 1 / 60,
     startingNodes:         undefined,
   });
 

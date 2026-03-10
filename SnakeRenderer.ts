@@ -1,5 +1,6 @@
 import { DebugLevel } from "./DebugLevel";
 import type { GameStateEvent } from "./Events";
+import { RectInt2d } from "./Point2d";
 import { SnakeEngine } from "./SnakeEngine";
 import { EngineConfig, type IEngineConfig } from "./Types";
 
@@ -12,23 +13,39 @@ class SnakeRenderer {
       : this.ctx.canvas.clientHeight;
   }
 
-  public get effectiveGridCellWidth() {
+  public get renderedCellWidth() {
     return Math.floor(this.outputSquareWidth / this.engine.playfieldRect.width);
   }
 
-  public get effectiveGridOutputSquareWidth() {
-    return this.effectiveGridCellWidth * this.engine.playfieldRect.width;
+  public get playfieldRenderedWidth() {
+    return this.renderedCellWidth * this.engine.playfieldRect.width;
   }
 
-  constructor(public readonly ctx: CanvasRenderingContext2D, public readonly config: IEngineConfig = EngineConfig.defaultConfig) {
+  public get renderedCellRect() {
+    return RectInt2d.fromDimensionsAndMin(this.playfieldRenderedWidth, this.playfieldRenderedWidth);
+  }
+
+  public readonly ctx: CanvasRenderingContext2D;
+  public constructor(
+    public readonly canvas: HTMLCanvasElement,
+    public readonly config: IEngineConfig = EngineConfig.defaultConfig,
+  ) {
     this.engine = new SnakeEngine(config);
-    this.wrapper = new CtxWrapper(ctx);
+    this.ctx = canvas.getContext("2d")!;
+    this.wrapper = new CtxWrapper(this.ctx);
   }
 
   public startGame() {
     this.engine.initGame();
     this.engine.onTickCompleted.add(e => this.draw(e));
-    this.engine.startGame();
+    document.onkeyup = (e: KeyboardEvent) => {
+      debugger
+      if (e.key === " ") {
+        this.engine.startGame();
+        document.onkeyup = null;
+      }
+    };
+    // this.engine.startGame();
     this.draw({ engine: this.engine });
   }
 
@@ -42,12 +59,12 @@ class SnakeRenderer {
     this.wrapper.strokeSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, strokeStyle: "black" });
     this.wrapper.autoSave = false;
     this.wrapper.autoRestore = false;
-    for (let i = 0, offsetWidth = 0; i <= this.engine.playfieldRect.width; i++, offsetWidth = i * this.effectiveGridCellWidth) {
-      for (let j = 0, offsetHeight = 0; j <= this.engine.playfieldRect.height; j++, offsetHeight = j * this.effectiveGridCellWidth) {
-        this.wrapper.strokeSquareFull(offsetWidth, offsetHeight, this.effectiveGridCellWidth);
+    for (let i = 0, offsetWidth = 0; i <= this.engine.playfieldRect.width; i++, offsetWidth = i * this.renderedCellWidth) {
+      for (let j = 0, offsetHeight = 0; j <= this.engine.playfieldRect.height; j++, offsetHeight = j * this.renderedCellWidth) {
+        this.wrapper.strokeSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth);
         if (snakeSquares.find(e => e.x === i && e.y === j)) {
           this.wrapper.autoSave = this.wrapper.autoRestore = true;
-          this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.effectiveGridCellWidth, { lineWidth: 2, fillStyle: this.engine.snake.head.equals({ x: i, y: j })
+          this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { lineWidth: 2, fillStyle: this.engine.snake.head.equals({ x: i, y: j })
             ? "red"
             : (this.engine.snake.snakeNodesDebug.find(e => e.equals({ x: i, y: j }))
               ? "blue"
@@ -58,9 +75,11 @@ class SnakeRenderer {
           this.ctx.ellipse(offsetWidth + Math.floor(this.effectiveGridCellWidth / 2), offsetHeight + Math.floor(this.effectiveGridCellWidth / 2), this.effectiveGridCellWidth, this.effectiveGridCellWidth, 0, 0, 2 * Math.PI);
           this.ctx.fill();
           this.ctx.restore(); */
-        }/*  else if (SnakeEngine.DEBUG_MODE) {
-
-        } */
+        } else if (this.engine.currPellets.find(e => e.equals({ x: i, y: j }))) {
+          this.wrapper.autoSave = this.wrapper.autoRestore = true;
+          this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { lineWidth: 2, fillStyle: "yellow" });
+          this.wrapper.autoSave = this.wrapper.autoRestore = false;
+        }
       }
     }
     this.wrapper.restore();
@@ -77,7 +96,7 @@ class SnakeRenderer {
     this.wrapper.autoRestore = false;
     for (let i = 0; i <= this.engine.playfieldRect.width; i++) {
       for (let j = 0; j <= this.engine.playfieldRect.height; j++) {
-        this.wrapper.strokeSquareFull(i * this.effectiveGridCellWidth, j * this.effectiveGridCellWidth, this.effectiveGridCellWidth);
+        this.wrapper.strokeSquareFull(i * this.renderedCellWidth, j * this.renderedCellWidth, this.renderedCellWidth);
       }
     }
     // this.wrapper.autoSave = true;
@@ -412,6 +431,14 @@ class CtxWrapper implements CtxWrapperSettings {
   //   ctx.clearEllipse(p.x, p.y, p.width, p.height);
   //   if (wrapperSettings.autoRestore ?? this.autoRestore) ctx.restore();
   // }
+
+  /* // #region Images
+  public static readonly imgMap = new Map<string, HTMLImageElement | undefined>();
+  public static registerImg(identifier: string, resourceURL: string) {
+    if (this.imgMap.has(identifier)) return;
+    this.imgMap.set(identifier, new Image())
+  }
+  // #endregion Images */
   // #endregion Static
 
   // #region Instance

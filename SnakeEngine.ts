@@ -23,6 +23,7 @@ class SnakeEngine {
 
   private obstacles: Point[] = [];
   private pellets:   Point[] = [];
+  public get currPellets() { return [...this.pellets]; }
   public getValidSpawnLocations() {
     const ret: Point[] = [];
     const lineSegments = this.snake?.segments;
@@ -73,7 +74,7 @@ class SnakeEngine {
         this.pellets.push(t[index]!);
         t.splice(Math.round(Math.random() * t.length), 1);
       }
-    }
+    } else this.pellets.push(...this.config.pelletConfig.startingObjs.map(e => Point.fromIPoint2d(e)));
 
     // requestAnimationFrame(this.update);
   }
@@ -83,16 +84,14 @@ class SnakeEngine {
   startGame() {
     if (this.timerId) return;
     SnakeEngine.debugLevel.do(
-      DebugLevel.WARN,
+      DebugLevel.DEBUG,
       () => document.onkeyup = e => this.playOnSpaceBar(e),
       () => this.timerId = window.setInterval(() => this.update(), this.config.millisecondsPerUpdate),
     );
     this.onGameOver.add(_ => this.endGame());
   }
 
-  playOnSpaceBar(e: KeyboardEvent) {
-    if (e.key === " ") this.update();
-  }
+  playOnSpaceBar(e: KeyboardEvent) { if (e.key === " ") this.update(); }
 
   pauseGame() {
     if (!this.timerId) return;
@@ -106,7 +105,15 @@ class SnakeEngine {
   }
   // #endregion Tick Management
 
+  private lastUpdate = -1;
   public update() {
+    if (this.lastUpdate < 0) {
+      console.log("first update at %s", this.lastUpdate = performance.now());
+    } else {
+      const prior = this.lastUpdate;
+      this.lastUpdate = performance.now();
+      console.log("Delta: %s", this.lastUpdate - prior);
+    }
     // 1. Inputs
     const keys = this.inputHandler.getKeysDown();
     this.inputHandler.resetState();
