@@ -50,7 +50,7 @@ class SnakeRenderer {
   }
 
   public draw(args: GameStateEvent) {
-    this.wrapper.fillSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, fillStyle: "rgba(255, 255, 255, .25)" });
+    this.wrapper.fillSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, fillStyle: this.engine.isGameOver ? "rgba(255, 0, 0, .25)" : "rgba(255, 255, 255, .25)" });
     const snakeSquares = args.engine.snake.filledNodes;
     SnakeEngine.debugLevel.print(DebugLevel.LOG, "Drawn nodes (%s): %o", snakeSquares.length, snakeSquares);
 

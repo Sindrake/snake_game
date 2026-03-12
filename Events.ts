@@ -46,7 +46,7 @@ interface GameOverEvent extends GameStateEvent {
 }
 interface PelletEatenEvent extends GameStateEvent {
   /** The length of the snake after the pellet has been eaten. */
-  snakeLength: number;
+  snakeLength:       number;
   pelletCoordinates: Point;
 }
 

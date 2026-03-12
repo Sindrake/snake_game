@@ -46,14 +46,15 @@ class SnakeEngine {
 
   public readonly playfieldRect: Rect;
   public get currentDirection(): Direction { return this.snake.headDirection; }
-  public snake:                  Snake;
+  private _snake:                Snake;
+  public get snake() { return this._snake; }
 
   constructor(
     public readonly config: IEngineConfig = EngineConfig.defaultConfig,
     public readonly inputHandler: IInputHandler = new DebugInputHandler(),
   ) {
     this.playfieldRect = Rect.fromDimensionsAndMin(config.gridWidth, config.gridHeight);
-    this.snake = Snake.fromPreferences(this.config, this.playfieldRect);
+    this._snake = Snake.fromPreferences(this.config, this.playfieldRect);
     this._isGameOver = false;
 
     this.initGame();
@@ -147,7 +148,7 @@ class SnakeEngine {
         snakeLength:       this.snake.snakeLength,
       };
       // Then make the new one
-      this.generatePellet();
+      if (this.pellets.length < this.config.pelletConfig.maxObjs) this.generatePellet();
       // Then fire the event
       this.onPelletEaten.fire(args);
     }
