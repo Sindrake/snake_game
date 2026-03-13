@@ -1,25 +1,6 @@
 import { RectInt, type IPoint2d } from "./Point2d";
 
-/* enum SnakeAssetType {
-  head,
-  body,
-  pellet,
-  obstacle,
-  background,
-  border,
-}
-class SnakeAsset {
-  private constructor(
-    public readonly identifier: string,
-    public readonly url: string,
-    public readonly sourceRect: RectInt,
-    public readonly type: SnakeAssetType,
-  ) {}
-} */
-
 class SnakeImage {
-  // public static readonly imgMap = new Map<string, HTMLImageElement | undefined>();
-  // public static readonly imgMap = new Map<string, SnakeImage | undefined>();
   private static readonly imgMap = new Map<string, SnakeImage>();
   private _isLoaded = false;
   public get isLoaded() { return this._isLoaded; }

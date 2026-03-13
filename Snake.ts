@@ -12,7 +12,7 @@ class Snake {
 
   // #region Initialization
   private constructor(private readonly config: ISnakeConfig, startingNodes: Point[], private readonly playfield: RectInt) {
-    this._lastDirection = Direction.fromCardinalDisplacement(startingNodes[1]!, startingNodes[0]!)!; // this._lastDirection = this.config.startingDirection;
+    this._lastDirection = Direction.fromCardinalDisplacement(startingNodes[1]!, startingNodes[0]!)!;
     this._snakeLength = this.config.startingLength!;
     this._snakeNodes = startingNodes.slice();
   }
@@ -50,7 +50,6 @@ class Snake {
 
   public get filledNodes(): Point[] {
     if (!Snake.STORES_SEGMENTS_ONLY) return this._snakeNodes.slice();
-    // return this._snakeNodes.reduce((acc, c) => {
     const rv = this._snakeNodes.reduce((acc, c) => {
       /** The previous point */
       const p = acc.at(-1)!;
@@ -58,7 +57,6 @@ class Snake {
       const deltaAxis = p.x === c.x ? (p.y === c.y ? undefined : Axis.y) : Axis.x;
       if (deltaAxis === undefined) return acc;
       const [pDeltaAxis, cDeltaAxis] = [p.getAxis(deltaAxis), c.getAxis(deltaAxis)];
-      // for (let i = pDeltaAxis; cDeltaAxis > pDeltaAxis ? i <= cDeltaAxis : i >= cDeltaAxis; cDeltaAxis > pDeltaAxis ? i++ : i--) {
       for (let i = pDeltaAxis; cDeltaAxis > pDeltaAxis ? ++i <= cDeltaAxis : --i >= cDeltaAxis;) {
         const newPoint = new Point(c.x, c.y);
         newPoint.setAxis(deltaAxis, i);
@@ -183,8 +181,7 @@ class Snake {
 
   /** @deprecated */
   public get hasInvalidState(): boolean {
-    // return this._snakeNodes.filter((e, i) => i + 1 === this._snakeNodes.length || e.matchingAxes(this._snakeNodes[i + 1]!).length > 0).length !== this._snakeNodes.length;
-    return false;
+    return this._snakeNodes.filter((e, i) => i + 1 === this._snakeNodes.length || e.matchingAxes(this._snakeNodes[i + 1]!).length > 0).length !== this._snakeNodes.length;
   }
   // #endregion Accessors
 
@@ -233,7 +230,6 @@ class Snake {
       this._lastDirection = d;
     }
 
-    // return this.updateHead(d, addedExtraTurn);
     const rv = this.updateHead(d, playfield, addedExtraTurn);
     // TODO: Restore tail if true
     Snake.DEBUG_LEVEL.groupEnd(LOG);

@@ -41,6 +41,10 @@ class ParameterizedNodeConfig implements INodeConfig {
 interface ISnakeConfig {
   wallBehavior:       WallBehavior;
   startingLength:     number;
+  /**
+   * @todo REMOVE
+   * @deprecated
+   */
   startingDirection?: Direction;
   startingNodes?:     Point[];
 };
