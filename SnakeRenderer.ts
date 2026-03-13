@@ -2,6 +2,7 @@ import { DebugLevel } from "./DebugLevel";
 import type { GameStateEvent } from "./Events";
 import { RectInt2d } from "./Point2d";
 import { SnakeEngine } from "./SnakeEngine";
+import { SnakeAssetPack, SnakeImage } from "./SnakeImage";
 import { EngineConfig, type IEngineConfig } from "./Types";
 
 class SnakeRenderer {
@@ -25,7 +26,8 @@ class SnakeRenderer {
     return RectInt2d.fromDimensionsAndMin(this.playfieldRenderedWidth, this.playfieldRenderedWidth);
   }
 
-  public readonly ctx: CanvasRenderingContext2D;
+  public readonly ctx:       CanvasRenderingContext2D;
+  public readonly assetPack: SnakeAssetPack;
   public constructor(
     public readonly canvas: HTMLCanvasElement,
     public readonly config: IEngineConfig = EngineConfig.defaultConfig,
@@ -33,6 +35,11 @@ class SnakeRenderer {
     this.engine = new SnakeEngine(config);
     this.ctx = canvas.getContext("2d")!;
     this.wrapper = new CtxWrapper(this.ctx);
+    this.assetPack = new SnakeAssetPack(
+      { url: "SnakeAssets/head1.png" },
+      { url: "SnakeAssets/body1.png" },
+      { url: "SnakeAssets/pellet1.png" },
+    );
   }
 
   public initGame() {
@@ -68,7 +75,8 @@ class SnakeRenderer {
           this.wrapper.autoSave = this.wrapper.autoRestore = false;
         } else if (this.engine.currPellets.find(e => e.equals({ x: i, y: j }))) {
           this.wrapper.autoSave = this.wrapper.autoRestore = true;
-          this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { lineWidth: 2, fillStyle: "yellow" });
+          if (!SnakeImage.tryDrawImage(this.ctx, "pellet", offsetWidth, offsetHeight, { x: this.renderedCellWidth, y: this.renderedCellWidth }))
+            this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { lineWidth: 2, fillStyle: "yellow" });
           this.wrapper.autoSave = this.wrapper.autoRestore = false;
         }
       }
