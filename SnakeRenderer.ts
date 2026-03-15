@@ -7,6 +7,8 @@ import { EngineConfig, type IEngineConfig } from "./Types";
 
 interface RenderConfig {
   get assets(): ImageParams[] | undefined;
+  /** Rotate a border asset, or just draw a manual border? */
+  get rotateBorders(): boolean | undefined;
 };
 
 class SnakeRenderer {
@@ -18,7 +20,8 @@ class SnakeRenderer {
       { identifier: "bgTile", url: "assets/bgTile.png" },
       { identifier: "corner", url: "assets/bgCornerTopLeft.png" },
       { identifier: "border", url: "assets/bgBorderLeft.png" },
-    ]
+    ],
+    rotateBorders: false,
   };
 
   public readonly engine:  SnakeEngine;
@@ -68,6 +71,7 @@ class SnakeRenderer {
     this.draw({ engine: this.engine });
   }
 
+  // #region Rotation Helpers
   private getTileType(x: number, y: number): "corner" | "border" | "tile" {
     const width = this.engine.playfieldRect.width;
     const height = this.engine.playfieldRect.height;
@@ -127,6 +131,7 @@ class SnakeRenderer {
     if (direction === Direction2d.down) return 270;   // Rotate 270° clockwise (90° counter-clockwise)
     return 0; // Default to no rotation
   }
+  // #endregion Rotation Helpers
 
   public draw(args: GameStateEvent) {
     this.wrapper.fillSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, fillStyle: this.engine.isGameOver ? "rgba(255, 0, 0, .5)" : "rgba(255, 255, 255, .5)" });
@@ -134,25 +139,26 @@ class SnakeRenderer {
     const snakeSegmentPoints = args.engine.snake.segmentPoints;
     SnakeEngine.debugLevel.print(DebugLevel.LOG, "Drawn nodes (%s): %o", snakeSquares.length, snakeSquares);
 
-    this.wrapper.autoSave = true;
-    this.wrapper.autoRestore = false;
-    this.wrapper.strokeSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, strokeStyle: "black" });
     this.wrapper.autoSave = this.wrapper.autoRestore = true;
 
     for (let i = 0, offsetWidth = 0; i < this.engine.playfieldRect.width; i++, offsetWidth = i * this.renderedCellWidth) {
       for (let j = 0, offsetHeight = 0; j < this.engine.playfieldRect.height; j++, offsetHeight = j * this.renderedCellWidth) {
         // #region Render background tiles
-        const tileType = this.getTileType(i, j);
         let backgroundDrawn = false;
+        if (this.renderConfig.rotateBorders) {
+          const tileType = this.getTileType(i, j);
 
-        switch (tileType) {
-        case "border":
-        case "corner":
-          backgroundDrawn = this.drawRotatedTile(tileType, offsetWidth, offsetHeight, this.getRotationAngle(i, j, tileType));
-          break;
-        case "tile":
+          switch (tileType) {
+          case "border":
+          case "corner":
+            backgroundDrawn = this.drawRotatedTile(tileType, offsetWidth, offsetHeight, this.getRotationAngle(i, j, tileType));
+            break;
+          default: // case "tile":
+            backgroundDrawn = SnakeImage.tryDrawImage(this.ctx, "bgTile", offsetWidth, offsetHeight, { x: this.renderedCellWidth, y: this.renderedCellWidth });
+            break;
+          }
+        } else {
           backgroundDrawn = SnakeImage.tryDrawImage(this.ctx, "bgTile", offsetWidth, offsetHeight, { x: this.renderedCellWidth, y: this.renderedCellWidth });
-          break;
         }
 
         // Fallback to grid lines if background assets fail to load
@@ -190,7 +196,7 @@ class SnakeRenderer {
       }
     }
     if (this.engine.isGameOver) this.wrapper.fillSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, fillStyle: "rgba(255, 0, 0, .5)" });
-    this.wrapper.restore();
+    this.wrapper.strokeSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, strokeStyle: "black" });
     this.wrapper.autoSave = this.wrapper.autoRestore = false;
   }
 
