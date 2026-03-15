@@ -2,10 +2,25 @@ import { DebugLevel } from "./DebugLevel";
 import type { GameStateEvent } from "./Events";
 import { RectInt2d, Direction2d } from "./Point2d";
 import { SnakeEngine } from "./SnakeEngine";
-import { SnakeAssetPack, SnakeImage } from "./SnakeImage";
+import { SnakeImage, type ImageParams } from "./SnakeImage";
 import { EngineConfig, type IEngineConfig } from "./Types";
 
+interface RenderConfig {
+  get assets(): ImageParams[] | undefined;
+};
+
 class SnakeRenderer {
+  public static readonly defaultConfig: RenderConfig = {
+    assets: [
+      { identifier: "head", url: "assets/snakeHead.png" },
+      { identifier: "body", url: "assets/snakeBody.png" },
+      { identifier: "pellet", url: "assets/pellet.png" },
+      { identifier: "bgTile", url: "assets/bgTile.png" },
+      { identifier: "corner", url: "assets/bgCornerTopLeft.png" },
+      { identifier: "border", url: "assets/bgBorderLeft.png" },
+    ]
+  };
+
   public readonly engine:  SnakeEngine;
   public readonly wrapper: CtxWrapper;
   public get outputSquareWidth() {
@@ -26,28 +41,24 @@ class SnakeRenderer {
     return RectInt2d.fromDimensionsAndMin(this.playfieldRenderedWidth, this.playfieldRenderedWidth);
   }
 
-  public readonly ctx:       CanvasRenderingContext2D;
-  public readonly assetPack: SnakeAssetPack;
+  public readonly ctx:           CanvasRenderingContext2D;
+  public readonly assetPromise?: Promise<SnakeImage[]>;
   public constructor(
     public readonly canvas: HTMLCanvasElement,
     public readonly config: IEngineConfig = EngineConfig.defaultConfig,
+    public readonly renderConfig: RenderConfig = SnakeRenderer.defaultConfig,
   ) {
     this.engine = new SnakeEngine(config);
     this.ctx = canvas.getContext("2d")!;
     this.wrapper = new CtxWrapper(this.ctx);
-    this.assetPack = new SnakeAssetPack(
-      { url: "assets/snakeHead.png" },
-      { url: "assets/snakeBody.png" },
-      { url: "assets/pellet.png" },
-      { url: "assets/bgTile.png" },
-      { url: "assets/bgCornerTopLeft.png" },
-      { url: "assets/bgBorderLeft.png" },
-    );
+    this.assetPromise = renderConfig.assets
+      ? SnakeImage.loadImages(...renderConfig.assets)
+      : undefined;
   }
 
   public async initGame() {
     // Wait for all assets to load before initializing the game
-    await this.assetPack.promise;
+    await this.assetPromise;
     this.engine.initGame();
     this.engine.onTickCompleted.add(e => this.draw(e));
   }
@@ -614,3 +625,7 @@ class CtxWrapper implements CtxWrapperSettings {
 }
 
 export default SnakeRenderer;
+
+export type {
+  RenderConfig,
+};

@@ -1,5 +1,11 @@
 import { RectInt, type IPoint2d } from "./Point2d";
 
+type ImageParams = {
+  identifier:  string;
+  url:         string;
+  sourceRect?: RectInt | IPoint2d;
+};
+
 class SnakeImage {
   private static readonly imgMap = new Map<string, SnakeImage>();
   private _isLoaded = false;
@@ -24,17 +30,32 @@ class SnakeImage {
     SnakeImage.imgMap.set(this.identifier, this);
   }
 
-  public static promiseFromRect(
+  public static loadWithRect(
     identifier: string,
     url: string,
     sourceRect?: RectInt,
   ) { return new SnakeImage(identifier, url, sourceRect).promise; }
 
-  public static promiseFromDimensions(
+  public static loadWithDimensions(
     identifier: string,
     url: string,
-    dimensions?: IPoint2d,
-  ) { return new SnakeImage(identifier, url, dimensions ? RectInt.fromDimensionsAndMin(dimensions.x, dimensions.y) : undefined).promise; }
+    sourceDimensions?: IPoint2d,
+  ) { return new SnakeImage(identifier, url, sourceDimensions ? RectInt.fromDimensionsAndMin(sourceDimensions.x, sourceDimensions.y) : undefined).promise; }
+
+  public static loadImage(
+    identifier: string,
+    url: string,
+    sourceRect?: RectInt | IPoint2d,
+  ) {
+    if (sourceRect instanceof RectInt) return this.loadWithRect(identifier, url, sourceRect);
+    return this.loadWithDimensions(identifier, url, sourceRect);
+  }
+
+  public static loadImageParams({ identifier, url, sourceRect }: ImageParams) { return this.loadImage(identifier, url, sourceRect); }
+
+  public static loadImages(...images: ImageParams[]) {
+    return Promise.all(images.map(e => this.loadImageParams(e)));
+  }
 
   private onLoad(_e: Event) { this._isLoaded = true; }
 
@@ -77,10 +98,11 @@ class SnakeImage {
   }
 }
 
+/** @deprecated */
 class SnakeAssetPack {
   public readonly promise: Promise<SnakeImage[]>;
   private static toPromise(identifier: string, e: { url: string; dimensions?: RectInt | IPoint2d }) {
-    return e.dimensions instanceof RectInt ? SnakeImage.promiseFromRect(identifier, e.url, e.dimensions) : SnakeImage.promiseFromDimensions(identifier, e.url, e.dimensions);
+    return e.dimensions instanceof RectInt ? SnakeImage.loadWithRect(identifier, e.url, e.dimensions) : SnakeImage.loadWithDimensions(identifier, e.url, e.dimensions);
   }
 
   constructor(
@@ -105,4 +127,8 @@ class SnakeAssetPack {
 export {
   SnakeImage,
   SnakeAssetPack,
+};
+
+export type {
+  ImageParams,
 };
