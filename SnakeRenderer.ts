@@ -126,37 +126,32 @@ class SnakeRenderer {
     this.wrapper.autoSave = true;
     this.wrapper.autoRestore = false;
     this.wrapper.strokeSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, strokeStyle: "black" });
-    this.wrapper.autoSave = false;
-    this.wrapper.autoRestore = false;
+    this.wrapper.autoSave = this.wrapper.autoRestore = true;
 
-    // Render background tiles
     for (let i = 0, offsetWidth = 0; i < this.engine.playfieldRect.width; i++, offsetWidth = i * this.renderedCellWidth) {
       for (let j = 0, offsetHeight = 0; j < this.engine.playfieldRect.height; j++, offsetHeight = j * this.renderedCellWidth) {
+        // #region Render background tiles
         const tileType = this.getTileType(i, j);
         let backgroundDrawn = false;
 
-        if (tileType === "tile") {
+        switch (tileType) {
+        case "border":
+        case "corner":
+          backgroundDrawn = this.drawRotatedTile(tileType, offsetWidth, offsetHeight, this.getRotationAngle(i, j, tileType));
+          break;
+        case "tile":
           backgroundDrawn = SnakeImage.tryDrawImage(this.ctx, "bgTile", offsetWidth, offsetHeight, { x: this.renderedCellWidth, y: this.renderedCellWidth });
-        } else if (tileType === "corner") {
-          const angle = this.getRotationAngle(i, j, "corner");
-          backgroundDrawn = this.drawRotatedTile("bgCorner", offsetWidth, offsetHeight, angle);
-        } else if (tileType === "border") {
-          const angle = this.getRotationAngle(i, j, "border");
-          backgroundDrawn = this.drawRotatedTile("bgBorder", offsetWidth, offsetHeight, angle);
+          break;
         }
 
         // Fallback to grid lines if background assets fail to load
         if (!backgroundDrawn) {
-          this.wrapper.strokeSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth);
+          this.wrapper.strokeSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { fillStyle: "rgba(255, 255, 255, .5)" });
         }
-      }
-    }
+        // #endregion Render background tiles
 
-    // Render snake and pellets
-    for (let i = 0, offsetWidth = 0; i < this.engine.playfieldRect.width; i++, offsetWidth = i * this.renderedCellWidth) {
-      for (let j = 0, offsetHeight = 0; j < this.engine.playfieldRect.height; j++, offsetHeight = j * this.renderedCellWidth) {
+        // #region Render snake and pellets
         if (snakeSquares.find(e => e.x === i && e.y === j)) {
-          this.wrapper.autoSave = this.wrapper.autoRestore = true;
           const isHead = this.engine.snake.head.equals({ x: i, y: j });
           const isSegment = snakeSegmentPoints.some(e => e.equals({ x: i, y: j }));
 
@@ -176,16 +171,16 @@ class SnakeRenderer {
               ? "red"
               : (isSegment ? "blue" : "green") });
           }
-          this.wrapper.autoSave = this.wrapper.autoRestore = false;
         } else if (this.engine.currPellets.find(e => e.equals({ x: i, y: j }))) {
-          this.wrapper.autoSave = this.wrapper.autoRestore = true;
           if (!SnakeImage.tryDrawImage(this.ctx, "pellet", offsetWidth, offsetHeight, { x: this.renderedCellWidth, y: this.renderedCellWidth }))
             this.wrapper.fillSquareFull(offsetWidth, offsetHeight, this.renderedCellWidth, { lineWidth: 2, fillStyle: "yellow" });
-          this.wrapper.autoSave = this.wrapper.autoRestore = false;
         }
+        // #endregion Render snake and pellets
       }
     }
+    if (this.engine.isGameOver) this.wrapper.fillSquareFull(0, 0, this.outputSquareWidth, { lineWidth: 2, fillStyle: "rgba(255, 0, 0, .5)" });
     this.wrapper.restore();
+    this.wrapper.autoSave = this.wrapper.autoRestore = false;
   }
 
   public drawGrid() {

@@ -88,16 +88,16 @@ class SnakeAssetPack {
     public readonly body: { url: string; dimensions?: RectInt | IPoint2d },
     public readonly pellet: { url: string; dimensions?: RectInt | IPoint2d },
     public readonly bgTile: { url: string; dimensions?: RectInt | IPoint2d },
-    public readonly bgCorner: { url: string; dimensions?: RectInt | IPoint2d },
-    public readonly bgBorder: { url: string; dimensions?: RectInt | IPoint2d },
+    public readonly corner: { url: string; dimensions?: RectInt | IPoint2d },
+    public readonly border: { url: string; dimensions?: RectInt | IPoint2d },
   ) {
     this.promise = Promise.all([
       SnakeAssetPack.toPromise("head", head),
       SnakeAssetPack.toPromise("body", body),
       SnakeAssetPack.toPromise("pellet", pellet),
       SnakeAssetPack.toPromise("bgTile", bgTile),
-      SnakeAssetPack.toPromise("bgCorner", bgCorner),
-      SnakeAssetPack.toPromise("bgBorder", bgBorder),
+      SnakeAssetPack.toPromise("corner", corner),
+      SnakeAssetPack.toPromise("border", border),
     ]);
   }
 }
