@@ -8,7 +8,7 @@ import { DEBUG, DebugLevel, INFO, LOG, WARN } from "./DebugLevel";
 class Snake {
   public static readonly DEBUG_LEVEL: DebugLevel = DebugLevel.INFO;
   private _snakeLength:               number;
-  public get snakeLength(): number { return this._snakeLength; }
+  public get snakeLength(): number { return Snake.STORES_SEGMENTS_ONLY ? this._snakeLength : this._snakeNodes.length; }
 
   // #region Initialization
   private constructor(private readonly config: ISnakeConfig, startingNodes: Point[], private readonly playfield: RectInt) {
@@ -43,14 +43,15 @@ class Snake {
   public get head() { return this._snakeNodes[0]!; }
   /** Last node */
   public get tail() { return this._snakeNodes.at(-1)!; }
-  /** Nodes other than the head & tail. */
-  public get bodyTurns() { return this._snakeNodes.slice(1, this._snakeNodes.length - 2); }
-  /** A shallow copy of `_snakeNodes`. */
+  /**
+   * @deprecated
+   * A shallow copy of `_snakeNodes`.
+   */
   public get snakeNodesDebug() { return this._snakeNodes.slice(); }
 
   public get filledNodes(): Point[] {
     if (!Snake.STORES_SEGMENTS_ONLY) return this._snakeNodes.slice();
-    const rv = this._snakeNodes.reduce((acc, c) => {
+    const rv = this.segmentPoints.reduce((acc, c) => {
       /** The previous point */
       const p = acc.at(-1)!;
       if (p.equals(c)) return acc;
@@ -76,16 +77,14 @@ class Snake {
 
   // #region Segments
   public get segmentPoints(): Point[] {
-    if (!Snake.STORES_SEGMENTS_ONLY) {
-      return this._snakeNodes.reduce((acc, e) => {
-        if (acc.length > 1 && Point.allAxisAligned(...(acc.slice(-2)!), e)) {
-          acc.pop();
-        }
-        acc.push(e);
-        return acc;
-      }, [] as Point[]);
-    }
-    return this._snakeNodes.slice();
+    if (Snake.STORES_SEGMENTS_ONLY) return this._snakeNodes.slice();
+    return this._snakeNodes.reduce((acc, e) => {
+      if (acc.length > 1 && Point.allAxisAligned(...(acc.slice(-2)!), e)) {
+        acc.pop();
+      }
+      acc.push(e);
+      return acc;
+    }, [] as Point[]);
   }
 
   public get segments(): Array<Point[]> {
@@ -110,44 +109,17 @@ class Snake {
     return t;
   }
 
-  /* public get segmentIndices(): Array<number[]> {
-    if (Snake.STORES_SEGMENTS_ONLY) {
-      const v = [[0, 1]];
-      for (let i = 1; i < this._snakeNodes.length; i++) {
-        const element = this._snakeNodes[i];
-        v.push([i, ])
-      }
-      const t = this._snakeNodes.reduce((acc, e) => {
-        if (acc[0]) acc.at(-1)!.push(e);
-        acc.push([e]);
-        return acc;
-      }, [] as Array<Point[]>);
-      t.pop();
-      return t;
-    }
-    return this._snakeNodes.reduce((acc, e) => {
-      if (acc.length <= 0) {
-        acc = [[e]];
-      } else if (acc.at(-1)!.length < 2 || Point.allAxisAligned(...(acc.at(-1)!), e)) {
-        acc.at(-1)![1] = e;
-      } else {
-        acc.push([acc.at(-1)!.at(-1)!, e]);
-      }
-      return acc;
-    }, [] as Array<Point[]>);
-  } */
-
   /**
    * 0: Head Node
    * 1: 2nd Node
    */
   private get headSegment() {
-    if (this._snakeNodes.length < 2) {
+    if (this.segmentPoints.length < 2) {
       Snake.DEBUG_LEVEL.print(WARN, "Can't get head segment; less than 2 nodes.");
-      Snake.DEBUG_LEVEL.print(DEBUG, "\tNodes: %o", this._snakeNodes);
+      Snake.DEBUG_LEVEL.print(DEBUG, "\tNodes: %o", this.segmentPoints);
       return undefined;
     }
-    return this._snakeNodes.slice(0, 2);
+    return this.segmentPoints.slice(0, 2);
   }
 
   /**
@@ -155,21 +127,17 @@ class Snake {
    * 1: Tail Node
    */
   private get tailSegment() {
-    if (this._snakeNodes.length < 2) {
+    if (this.segmentPoints.length < 2) {
       Snake.DEBUG_LEVEL.print(WARN, "Can't get tail segment; less than 2 nodes.");
-      Snake.DEBUG_LEVEL.print(DEBUG, "\tNodes: %o", this._snakeNodes);
+      Snake.DEBUG_LEVEL.print(DEBUG, "\tNodes: %o", this.segmentPoints);
       return undefined;
     }
-    return this._snakeNodes.slice(-2);
+    return this.segmentPoints.slice(-2);
   }
   // #endregion Segments
 
   // #region Directions
   public get facingDirections(): Direction[] {
-    /* return this._snakeNodes.map((e, i) => {
-      if (i === 0) return this.lastDirection;
-      return Direction.fromCardinalDisplacement(this._snakeNodes[i - 1]!, e)!;
-    }); */
     return this.segments.map(e => Direction.fromCardinalDisplacement(e[1]!, e[0]!)!);
   }
 
@@ -192,10 +160,6 @@ class Snake {
   }
   // #endregion Directions
 
-  /** @deprecated */
-  public get hasInvalidState(): boolean {
-    return this._snakeNodes.filter((e, i) => i + 1 === this._snakeNodes.length || e.matchingAxes(this._snakeNodes[i + 1]!).length > 0).length !== this._snakeNodes.length;
-  }
   // #endregion Accessors
 
   /**
@@ -217,7 +181,7 @@ class Snake {
       if (Point.subtract(this.tail, this._snakeNodes.at(-2)!).magnitude() === 1
         || !Snake.STORES_SEGMENTS_ONLY) {
         Snake.DEBUG_LEVEL.print(DEBUG, "needs to move tail");
-        if (this._snakeNodes.length == 2) Snake.DEBUG_LEVEL.debugger(DEBUG);
+        if (this.segmentPoints.length == 2) Snake.DEBUG_LEVEL.debugger(DEBUG);
         // ...remove the tail
         const oldTail = this._snakeNodes.pop()!;
         Snake.DEBUG_LEVEL.print(DEBUG, "Removed tail node\nOld: %o\nNew: %o", oldTail, this.tail);
